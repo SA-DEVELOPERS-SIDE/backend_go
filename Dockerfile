@@ -1,18 +1,28 @@
-
-FROM golang:1.24.3-buster as builder  
+# Stage 1: Build the Go binary
+FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
+
+# Copy go.mod and go.sum first for dependency caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the source code
 COPY . .
 
-RUN go mod tidy
-RUN go build -o main .
+# Build the Go binary
+RUN go build -o server .
 
-FROM debian:bullseye-slim
+# Stage 2: Minimal runtime image
+FROM alpine:latest
 
-WORKDIR /root/
-COPY --from=builder /app/main .
+WORKDIR /app
 
-RUN apt-get update && apt-get install -y libc6
+# Copy the binary from the builder stage
+COPY --from=builder /app/server .
 
-EXPOSE 8080
-CMD ["./main"]
+# Expose port 5000 for Railway
+EXPOSE 5000
+
+# Run the server
+CMD ["./server"]
