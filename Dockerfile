@@ -1,28 +1,20 @@
-# Use official Golang image as a build environment
-FROM golang:1.24.3 as builder
+# Step 1: Build the Go application
+FROM golang:1.24.3-buster as builder  # Use Go version 1.24.3 and Debian Buster
 
-# Set the Current Working Directory inside the container
 WORKDIR /app
-
-# Copy everything from the current directory to the working directory
 COPY . .
 
-# Download dependencies
 RUN go mod tidy
-
-# Build the Go app
 RUN go build -o main .
 
-# Start a new stage from a smaller image (debian)
+# Step 2: Create a smaller image for running the application
 FROM debian:bullseye-slim
 
 WORKDIR /root/
-
-# Copy the compiled binary from the builder stage
 COPY --from=builder /app/main .
 
-# Expose port 8080
-EXPOSE 8080
+# Install necessary libraries
+RUN apt-get update && apt-get install -y libc6
 
-# Command to run the executable
+EXPOSE 8080
 CMD ["./main"]
